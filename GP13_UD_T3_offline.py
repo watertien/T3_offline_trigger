@@ -15,8 +15,11 @@ def get_DU_coord(lat, long, alt, obstime, origin=coord_1078):
   return gcs
 
 timewindow_ns = 7e3 # the coincidence timewindow
+nDU = 3
 
-fname = "data/GP13_UD/GP13_20240613_164741_RUN127_UD_RAW_ChanXYZ_20dB_11DUs_001.root"
+# fname = "data/GP13_UD/GP13_20240613_164741_RUN127_UD_RAW_ChanXYZ_20dB_11DUs_001.root"
+fname = "data/GP13_UD/GP13_20240616_122342_RUN127_UD_RAW_ChanXYZ_20dB_10DUs_001.root"
+out_path = "coincidence_table/" + fname.split('/')[-1] + '/'
 file_GP13_UD = rt.DataFile(fname)
 n = file_GP13_UD.tadc.get_number_of_entries()
 list_du_id = np.zeros(n, dtype=int)
@@ -94,19 +97,41 @@ list_time0 = list_sec0 + list_nanosec0 / 1e9
 list_time0_sorted = np.sort(list_time0)
 mask_time0_sort = np.argsort(list_time0)
 list_du_id_sorted = list_du_id[mask_time0_sort]
-list_trigger_time = grand_T3_trigger(list_time0_sorted, timewindow_ns / 1e9, 3)
+list_trigger_time = grand_T3_trigger(list_time0_sorted, timewindow_ns / 1e9, nDU)
 list_trigger_du_ids = [list_du_id_sorted[(np.abs(list_time0_sorted - time) <= (timewindow_ns / 1e9))] for time in list_trigger_time]
 list_n_DU = np.array([len(i) for i in list_trigger_du_ids])
 list_trigger_du_ids_flatted = np.array([du for dus in list_trigger_du_ids for du in dus])
-print(np.unique(list_du_id, return_counts=True))
-print(np.unique(list_trigger_du_ids_flatted, return_counts=True))
-# print(np.unique(list_du_id))
-# plt.plot(list_trigger_time, list_n_DU, marker='.')
-plt.hist(np.diff(list_trigger_time), np.logspace(-3, 3))
-plt.loglog()
-# plt.xlim(200,500)
-# plt.semilogy()
-plt.savefig('hist_delta_time.pdf')
+
+n = 0
+i_event = 0
+with open(f"{out_path}/Rec_coinctable.txt", 'w') as f:
+  with open(f"{out_path}/coord_antennas.txt", 'w') as f_coord:
+    with open(f"{out_path}/DU_id.UD.txt", 'w') as f_duid:
+      for t in list_trigger_time:
+        # Coincidence timewindow
+        mask_time_conincidence = (np.abs(list_time0_sorted - t) < (timewindow_ns / 1e9))
+        for i, du_id in enumerate(list_du_id[mask_time0_sort][mask_time_conincidence]):
+          # Use the GPS timestamp as trigger time for reconstruction
+          # Use the unfiltered Y as the trigger channel
+          index_peak = np.argmax(list_traces[mask_time0_sort][mask_time_conincidence,2,:][i])
+          time_peak = index_peak * 2 # ns
+          # Use ChY as the peak amplitude
+          amp_peak = list_traces[mask_time0_sort][mask_time_conincidence,2,:][i][index_peak]
+          # amp_peak = 1
+          # f.write(f"{n} {i_event} {second_with_nano[du_mask][mask_time_conincidence][i]:.9f} {amp_peak}\n") # LineNumber, EventID, TriggerTime, PeakAmplitude
+          # Use the first triggered DU as the time origin
+          f.write(f"{n} {i_event} {list_time0_sorted[mask_time_conincidence][i]:.9f} {amp_peak}\n") # LineNumber, EventID, TriggerTime, PeakAmplitude
+          # Coordinates in meter
+          date = datetime.datetime.utcfromtimestamp(list_time0_sorted[mask_time_conincidence][i])
+          gcs = get_DU_coord(list_lat[mask_time0_sort][mask_time_conincidence][i],
+                            list_lon[mask_time0_sort][mask_time_conincidence][i],
+                            list_alt[mask_time0_sort][mask_time_conincidence][i],
+                            str(date)[:10])
+          f_coord.write(f"{n} {gcs.x[0]} {gcs.y[0]} {gcs.z[0] + coord_1078.height[0]}\n")
+          f_duid.write(f"{list_du_id[mask_time0_sort][mask_time_conincidence][i]} {ref_sec} {ref_nanosec}\n")
+          n += 1
+        i_event += 1
+
 
 def dist_delta_t():
   list_du_seconds_0 = list_du_seconds - list_du_seconds[0]
