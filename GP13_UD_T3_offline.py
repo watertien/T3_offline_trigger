@@ -15,7 +15,7 @@ def get_DU_coord(lat, long, alt, obstime, origin=coord_1078):
   gcs = GRANDCS(geod, obstime=obstime, location=origin)
   return gcs
 
-timewindow_ns = 7e3 # the coincidence timewindow
+timewindow_ns = 4e3 # the coincidence timewindow
 nDU = 3
 
 # fname = "data/GP13_UD/GP13_20240613_164741_RUN127_UD_RAW_ChanXYZ_20dB_11DUs_001.root"
@@ -86,7 +86,7 @@ def grand_T3_trigger(arr_time_sorted, width, nDU):
    i = 0
    t = arr_time_sorted[0] + width
    while t < arr_time_sorted[-1]:
-    mask_coin = np.abs(arr_time_sorted - t) <= width
+    mask_coin = np.abs(safe_substraction(arr_time_sorted, t)) <= width
     if np.sum(mask_coin) >= nDU:
       # Possible timing coincidence,
       # search around this time for the most DU triggered
@@ -94,7 +94,7 @@ def grand_T3_trigger(arr_time_sorted, width, nDU):
       triggr_time.append(t)
       # Jump to the next one, if goes to the end, exit
       # the 'window' here is half of the actual coincidence window (+-) 
-      mask_t_next = arr_time_sorted > (t + 1 * width)
+      mask_t_next = arr_time_sorted > (t + width)
       if np.sum(mask_t_next):
         i = arr_index[mask_t_next][0]
         t = arr_time_sorted[i] + width
@@ -141,7 +141,7 @@ with open(f"{out_path}/Rec_coinctable.txt", 'w') as f:
     with open(f"{out_path}/DU_id.txt", 'w') as f_duid:
       for t in list_trigger_time:
         # Coincidence timewindow
-        mask_time_conincidence = (np.abs(list_time0_sorted - t) <= (timewindow_ns / 1e9))
+        mask_time_conincidence = (np.abs(safe_substraction(list_time0_sorted, t)) <= (timewindow_ns / 1e9))
         for i, du_id in enumerate(list_du_id[mask_time0_sort][mask_time_conincidence]):
           # Use the GPS timestamp as trigger time for reconstruction
           # Use the unfiltered Y as the trigger channel
