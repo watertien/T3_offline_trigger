@@ -27,8 +27,8 @@ file_GP13_UD = rt.DataFile(fpath)
 n = file_GP13_UD.tadc.get_number_of_entries()
 list_du_id = np.zeros(n, dtype=int)
 list_du_n = np.zeros(n, dtype=int)
-list_du_nanoseconds = np.zeros(n, dtype=int)
-list_du_seconds = np.zeros(n, dtype=int)
+list_du_nanoseconds = np.zeros(n, dtype=np.int64)
+list_du_seconds = np.zeros(n, dtype=np.int64)
 list_traces = np.zeros((n, 4, 1024), dtype=int)
 list_lat = np.zeros(n, float)
 list_lon = np.zeros(n, float)
@@ -45,6 +45,12 @@ for k in range(n):
   _list_alt = file_GP13_UD.trawvoltage.gps_alt[0]
   _list_du_nanoseconds = file_GP13_UD.tadc.du_nanoseconds[0]
   _list_du_seconds = file_GP13_UD.tadc.du_seconds[0]
+  _t_len = len(file_GP13_UD.tadc.trace_ch[0][1])
+  if _t_len != 1024:
+    # File is corrupted, exit
+    os.rmdir(out_path)
+    print(f"Trace length is not 1024 but {_t_len}.: " + fname)
+    exit(1)
   _list_traces[0] = file_GP13_UD.tadc.trace_ch[0][0]
   _list_traces[1] = file_GP13_UD.tadc.trace_ch[0][1]
   _list_traces[2] = file_GP13_UD.tadc.trace_ch[0][2]
@@ -63,6 +69,15 @@ for k in range(n):
   list_lon[k] = _list_lon
   list_alt[k] = _list_alt
 
+
+def safe_substraction(sec1, sec2):
+  # Substract seconds in nanosecond
+  # to avoid the rounding errors
+  nanosec1 = np.round(sec1 * 1e9)
+  nanosec2 = np.round(sec2 * 1e9)
+  return (nanosec1 - nanosec2) / 1e9
+
+
 # Offline T3 trigger
 def grand_T3_trigger(arr_time_sorted, width, nDU):
    n = len(arr_time_sorted)
@@ -79,10 +94,10 @@ def grand_T3_trigger(arr_time_sorted, width, nDU):
       triggr_time.append(t)
       # Jump to the next one, if goes to the end, exit
       # the 'window' here is half of the actual coincidence window (+-) 
-      mask_t_next = arr_time_sorted > (t + 2 * width)
+      mask_t_next = arr_time_sorted > (t + 1 * width)
       if np.sum(mask_t_next):
         i = arr_index[mask_t_next][0]
-        t = arr_time_sorted[i]
+        t = arr_time_sorted[i] + width
       else:
         # the end of the file, exit
         break
@@ -97,7 +112,7 @@ ref_nanosec = list_du_nanoseconds[np.argmin(list_du_seconds)]
 # Get the time elapsed wrt the first time point
 list_sec0 = list_du_seconds - ref_sec
 list_nanosec0 = list_du_nanoseconds - ref_nanosec
-list_time0 = list_sec0 + list_nanosec0 / 1e9
+list_time0 = list_sec0.astype(np.float64) + list_nanosec0.astype(np.float64) / 1e9
 list_time0_sorted = np.sort(list_time0)
 mask_time0_sort = np.argsort(list_time0)
 list_du_id_sorted = list_du_id[mask_time0_sort]
