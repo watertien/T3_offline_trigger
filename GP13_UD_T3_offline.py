@@ -15,7 +15,7 @@ def get_DU_coord(lat, long, alt, obstime, origin=coord_1078):
   gcs = GRANDCS(geod, obstime=obstime, location=origin)
   return gcs
 
-timewindow_ns = 4e3 # the coincidence timewindow
+timewindow_ns = 5e3 # the coincidence timewindow
 nDU = 3
 
 # fname = "data/GP13_UD/GP13_20240613_164741_RUN127_UD_RAW_ChanXYZ_20dB_11DUs_001.root"
@@ -82,16 +82,17 @@ def safe_substraction(sec1, sec2):
 def grand_T3_trigger(arr_time_sorted, width, nDU):
    n = len(arr_time_sorted)
    arr_index = np.arange(n)
-   triggr_time = []
+   triggr_time = np.array([], dtype=np.float64)
    i = 0
    t = arr_time_sorted[0] + width
    while t < arr_time_sorted[-1]:
     mask_coin = np.abs(safe_substraction(arr_time_sorted, t)) <= width
+    print(t)
     if np.sum(mask_coin) >= nDU:
       # Possible timing coincidence,
       # search around this time for the most DU triggered
       # Update the central timestamp to the trigger time of first DU + window
-      triggr_time.append(t)
+      triggr_time = np.append(triggr_time, t)
       # Jump to the next one, if goes to the end, exit
       # the 'window' here is half of the actual coincidence window (+-) 
       mask_t_next = arr_time_sorted > (t + width)
@@ -117,32 +118,18 @@ list_time0_sorted = np.sort(list_time0)
 mask_time0_sort = np.argsort(list_time0)
 list_du_id_sorted = list_du_id[mask_time0_sort]
 list_trigger_time = grand_T3_trigger(list_time0_sorted, timewindow_ns / 1e9, nDU)
-list_trigger_du_ids = [list_du_id_sorted[(np.abs(list_time0_sorted - time) <= (timewindow_ns / 1e9))] for time in list_trigger_time]
-list_n_DU = np.array([len(i) for i in list_trigger_du_ids])
-list_trigger_du_ids_flatted = np.array([du for dus in list_trigger_du_ids for du in dus])
 
-# Save the generated data in file for later (faster) searches.
-# Takes too much space.
-# np.savez(f"{out_path}fname.npz",
-#          list_du_id=list_du_id,
-#          list_du_seconds=list_du_seconds,
-#          list_du_nanoseconds=list_du_nanoseconds,
-#          list_lat=list_lat,
-#          list_lon=list_lon,
-#          list_alt=list_alt,
-#          list_traces=list_traces,
-#          list_trigger_time=list_trigger_time,
-#          t3_trigger_pars=[timewindow_ns, nDU])
-
-n = 0
-i_event = 0
+n = 0 # Linenumber
+i_event = 0 # Event ID
+print(list_trigger_time)
 with open(f"{out_path}/Rec_coinctable.txt", 'w') as f:
   with open(f"{out_path}/coord_antennas.txt", 'w') as f_coord:
     with open(f"{out_path}/DU_id.txt", 'w') as f_duid:
       for t in list_trigger_time:
         # Coincidence timewindow
         mask_time_conincidence = (np.abs(safe_substraction(list_time0_sorted, t)) <= (timewindow_ns / 1e9))
-        for i, du_id in enumerate(list_du_id[mask_time0_sort][mask_time_conincidence]):
+        print(t, np.sum(mask_time_conincidence))
+        for i, du_id in enumerate(list_du_id_sorted[mask_time_conincidence]):
           # Use the GPS timestamp as trigger time for reconstruction
           # Use the unfiltered Y as the trigger channel
           index_peak = np.argmax(list_traces[mask_time0_sort][mask_time_conincidence,2,:][i])
