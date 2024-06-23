@@ -131,11 +131,12 @@ with open(f"{out_path}/Rec_coinctable.txt", 'w') as f:
         print(t, np.sum(mask_time_conincidence))
         for i, du_id in enumerate(list_du_id_sorted[mask_time_conincidence]):
           # Use the GPS timestamp as trigger time for reconstruction
-          # Use the unfiltered Y as the trigger channel
-          index_peak = np.argmax(list_traces[mask_time0_sort][mask_time_conincidence,2,:][i])
+          # Use the filtered Y as the trigger channel
+          i_channel = 0
+          index_peak = np.argmax(list_traces[mask_time0_sort][mask_time_conincidence,i_channel,:][i])
           time_peak = index_peak * 2 # ns
           # Use ChY as the peak amplitude
-          amp_peak = list_traces[mask_time0_sort][mask_time_conincidence,2,:][i][index_peak]
+          amp_peak = list_traces[mask_time0_sort][mask_time_conincidence,i_channel,:][i][index_peak]
           # amp_peak = 1
           # f.write(f"{n} {i_event} {second_with_nano[du_mask][mask_time_conincidence][i]:.9f} {amp_peak}\n") # LineNumber, EventID, TriggerTime, PeakAmplitude
           # Use the first triggered DU as the time origin
