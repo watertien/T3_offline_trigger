@@ -86,7 +86,7 @@ def safe_substraction(sec1, sec2):
 
 
 # Offline T3 trigger
-def grand_T3_trigger(arr_time_sorted, width, nDU):
+def grand_T3_trigger(arr_time_sorted, du_id, width, nDU):
    n = len(arr_time_sorted)
    arr_index = np.arange(n)
    triggr_time = np.array([], dtype=np.float64)
@@ -94,6 +94,13 @@ def grand_T3_trigger(arr_time_sorted, width, nDU):
    t = arr_time_sorted[0] + width
    while t < arr_time_sorted[-1]:
     mask_coin = np.abs(safe_substraction(arr_time_sorted, t)) <= width
+    list_du_id_triggered = du_id[mask_coin]
+    if len(list_du_id_triggered) != len(np.unique(list_du_id_triggered)):
+      # DU is triggered more than once in one time window.
+      # Skip this event.
+      i += 1
+      t = arr_time_sorted[i] + width
+      continue
     # print(t)
     if np.sum(mask_coin) >= nDU:
       # Possible timing coincidence,
@@ -124,7 +131,8 @@ list_time0 = list_sec0.astype(np.float64) + list_nanosec0.astype(np.float64) / 1
 list_time0_sorted = np.sort(list_time0)
 mask_time0_sort = np.argsort(list_time0)
 list_du_id_sorted = list_du_id[mask_time0_sort]
-list_trigger_time = grand_T3_trigger(list_time0_sorted, timewindow_ns / 1e9, nDU)
+list_trigger_time = grand_T3_trigger(list_time0_sorted, list_du_id_sorted,
+                                     timewindow_ns / 1e9, nDU)
 
 index_arr = np.arange(n_UD) # Used to locate the entry in the original file
 n_UD = 0 # Linenumber
