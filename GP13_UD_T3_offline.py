@@ -15,13 +15,13 @@ def get_DU_coord(lat, long, alt, obstime, origin=coord_1078):
   gcs = GRANDCS(geod, obstime=obstime, location=origin)
   return gcs
 
-timewindow_ns = 5e3 # the coincidence timewindow
+timewindow_ns = 5e3 # the coincidence timewindow, [ns]
 nDU = 3
 
 # fname = "data/GP13_UD/GP13_20240613_164741_RUN127_UD_RAW_ChanXYZ_20dB_11DUs_001.root"
 fpath = sys.argv[1]
 fname = fpath.split('/')[-1]
-out_path = "coincidence_table/" + fname + '/'
+out_path = "/sps/grand/xtian/grand_offline_T3_trigger/coincidence_table/" + fname + '/'
 os.makedirs(out_path, exist_ok=True)
 file_GP13_UD = rt.DataFile(fpath)
 n = file_GP13_UD.tadc.get_number_of_entries()
@@ -87,7 +87,7 @@ def grand_T3_trigger(arr_time_sorted, width, nDU):
    t = arr_time_sorted[0] + width
    while t < arr_time_sorted[-1]:
     mask_coin = np.abs(safe_substraction(arr_time_sorted, t)) <= width
-    print(t)
+    # print(t)
     if np.sum(mask_coin) >= nDU:
       # Possible timing coincidence,
       # search around this time for the most DU triggered
