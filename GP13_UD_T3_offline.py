@@ -24,18 +24,25 @@ fname = fpath.split('/')[-1]
 out_path = "/sps/grand/xtian/grand_offline_T3_trigger/coincidence_table/" + fname + '/'
 os.makedirs(out_path, exist_ok=True)
 file_GP13_UD = rt.DataFile(fpath)
+index_UD = []
 n = file_GP13_UD.tadc.get_number_of_entries()
-list_du_id = np.zeros(n, dtype=int)
-list_du_n = np.zeros(n, dtype=int)
-list_du_nanoseconds = np.zeros(n, dtype=np.int64)
-list_du_seconds = np.zeros(n, dtype=np.int64)
-list_traces = np.zeros((n, 4, 1024), dtype=int)
-list_lat = np.zeros(n, float)
-list_lon = np.zeros(n, float)
-list_alt = np.zeros(n, float)
+for i in range(n):
+  file_GP13_UD.tadc.get_entry(i)
+  if np.all(file_GP13_UD.tadc.trigger_pattern_10s) == False:
+    # No MD data
+    index_UD.append(i)
+n_UD = len(index_UD)
+list_du_id = np.zeros(n_UD, dtype=int)
+list_du_n = np.zeros(n_UD, dtype=int)
+list_du_nanoseconds = np.zeros(n_UD, dtype=np.int64)
+list_du_seconds = np.zeros(n_UD, dtype=np.int64)
+list_traces = np.zeros((n_UD, 4, 1024), dtype=int)
+list_lat = np.zeros(n_UD, float)
+list_lon = np.zeros(n_UD, float)
+list_alt = np.zeros(n_UD, float)
 # plt.figure(figsize=(12, 4))
 _list_traces = np.zeros((4, 1024), dtype=int)
-for k in range(n):
+for i, k in enumerate(index_UD):
   file_GP13_UD.tadc.get_entry(k)
   file_GP13_UD.trawvoltage.get_entry(k)
   _list_du_n = len(file_GP13_UD.tadc.du_id)
@@ -60,14 +67,14 @@ for k in range(n):
   # plt.plot(high_pass_filter(_list_traces[i][2,:]), marker='.', alpha=.5)
   # plt.tight_layout()
   # plt.savefig(f"imgs/Filtered_{v}_{j}.pdf")
-  list_du_id[k] = _list_du_id
-  list_du_n[k] = _list_du_n
-  list_du_nanoseconds[k] = _list_du_nanoseconds
-  list_du_seconds[k] = _list_du_seconds
-  list_traces[k] = _list_traces
-  list_lat[k] = _list_lat
-  list_lon[k] = _list_lon
-  list_alt[k] = _list_alt
+  list_du_id[i] = _list_du_id
+  list_du_n[i] = _list_du_n
+  list_du_nanoseconds[i] = _list_du_nanoseconds
+  list_du_seconds[i] = _list_du_seconds
+  list_traces[i] = _list_traces
+  list_lat[i] = _list_lat
+  list_lon[i] = _list_lon
+  list_alt[i] = _list_alt
 
 
 def safe_substraction(sec1, sec2):
@@ -119,8 +126,8 @@ mask_time0_sort = np.argsort(list_time0)
 list_du_id_sorted = list_du_id[mask_time0_sort]
 list_trigger_time = grand_T3_trigger(list_time0_sorted, timewindow_ns / 1e9, nDU)
 
-index_arr = np.arange(n) # Used to locate the entry in the original file
-n = 0 # Linenumber
+index_arr = np.arange(n_UD) # Used to locate the entry in the original file
+n_UD = 0 # Linenumber
 i_event = 0 # Event ID
 # print(list_trigger_time)
 with open(f"{out_path}/Rec_coinctable.txt", 'w') as f:
@@ -141,16 +148,16 @@ with open(f"{out_path}/Rec_coinctable.txt", 'w') as f:
           # amp_peak = 1
           # f.write(f"{n} {i_event} {second_with_nano[du_mask][mask_time_conincidence][i]:.9f} {amp_peak}\n") # LineNumber, EventID, TriggerTime, PeakAmplitude
           # Use the first triggered DU as the time origin
-          f.write(f"{n} {i_event} {list_time0_sorted[mask_time_conincidence][i]:.9f} {amp_peak}\n") # LineNumber, EventID, TriggerTime, PeakAmplitude
+          f.write(f"{n_UD} {i_event} {list_time0_sorted[mask_time_conincidence][i]:.9f} {amp_peak}\n") # LineNumber, EventID, TriggerTime, PeakAmplitude
           # Coordinates in meter
           date = datetime.datetime.utcfromtimestamp(list_time0_sorted[mask_time_conincidence][i])
           gcs = get_DU_coord(list_lat[mask_time0_sort][mask_time_conincidence][i],
                             list_lon[mask_time0_sort][mask_time_conincidence][i],
                             list_alt[mask_time0_sort][mask_time_conincidence][i],
                             str(date)[:10])
-          f_coord.write(f"{n} {gcs.x[0]} {gcs.y[0]} {gcs.z[0] + coord_1078.height[0]}\n")
+          f_coord.write(f"{n_UD} {gcs.x[0]} {gcs.y[0]} {gcs.z[0] + coord_1078.height[0]}\n")
           f_duid.write(f"{list_du_id[mask_time0_sort][mask_time_conincidence][i]} {ref_sec} {ref_nanosec} {index_arr[mask_time0_sort][mask_time_conincidence][i]}\n")
-          n += 1
+          n_UD += 1
         i_event += 1
 
 
