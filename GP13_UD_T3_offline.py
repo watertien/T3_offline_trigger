@@ -134,7 +134,7 @@ list_du_id_sorted = list_du_id[mask_time0_sort]
 list_trigger_time = grand_T3_trigger(list_time0_sorted, list_du_id_sorted,
                                      timewindow_ns / 1e9, nDU)
 
-index_arr = np.arange(n_UD) # Used to locate the entry in the original file
+#index_UD, Used to locate the entry in the original file
 n_UD = 0 # Linenumber
 i_event = 0 # Event ID
 # print(list_trigger_time)
@@ -164,7 +164,7 @@ with open(f"{out_path}/Rec_coinctable.txt", 'w') as f:
                             list_alt[mask_time0_sort][mask_time_conincidence][i],
                             str(date)[:10])
           f_coord.write(f"{n_UD} {gcs.x[0]} {gcs.y[0]} {gcs.z[0] + coord_1078.height[0]}\n")
-          f_duid.write(f"{list_du_id[mask_time0_sort][mask_time_conincidence][i]} {ref_sec} {ref_nanosec} {index_arr[mask_time0_sort][mask_time_conincidence][i]}\n")
+          f_duid.write(f"{list_du_id[mask_time0_sort][mask_time_conincidence][i]} {ref_sec} {ref_nanosec} {index_UD[mask_time0_sort][mask_time_conincidence][i]}\n")
           n_UD += 1
         i_event += 1
 
