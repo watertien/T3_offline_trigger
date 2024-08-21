@@ -32,6 +32,7 @@ for i in range(n):
     # No MD data
     index_UD.append(i)
 n_UD = len(index_UD)
+index_UD = np.array(index_UD)
 list_du_id = np.zeros(n_UD, dtype=int)
 list_du_n = np.zeros(n_UD, dtype=int)
 list_du_nanoseconds = np.zeros(n_UD, dtype=np.int64)
@@ -164,7 +165,7 @@ with open(f"{out_path}/Rec_coinctable.txt", 'w') as f:
                             list_alt[mask_time0_sort][mask_time_conincidence][i],
                             str(date)[:10])
           f_coord.write(f"{n_UD} {gcs.x[0]} {gcs.y[0]} {gcs.z[0] + coord_1078.height[0]}\n")
-          f_duid.write(f"{list_du_id[mask_time0_sort][mask_time_conincidence][i]} {ref_sec} {ref_nanosec} {index_UD[mask_time0_sort][mask_time_conincidence][i]}\n")
+          f_duid.write(f"{fname} {list_du_id[mask_time0_sort][mask_time_conincidence][i]} {ref_sec} {ref_nanosec} {index_UD[mask_time0_sort][mask_time_conincidence][i]}\n")
           n_UD += 1
         i_event += 1
 
